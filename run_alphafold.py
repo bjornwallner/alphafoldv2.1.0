@@ -43,6 +43,36 @@ from alphafold.model import data
 
 logging.set_verbosity(logging.INFO)
 
+
+# Path to directory of supporting data, contains 'params' dir.
+data_dir = '/proj/wallner/share/alphafold_data'
+if not os.path.exists(data_dir): #on berzelius
+  data_dir = '/proj/wallner-b/share/alphafold_data'
+
+
+DOWNLOAD_DIR= data_dir
+uniprot_database_path = os.path.join(
+    DOWNLOAD_DIR, 'uniprot',    'uniprot.fasta')
+uniref90_database_path = os.path.join(
+    DOWNLOAD_DIR, 'uniref90', 'uniref90.fasta')
+mgnify_database_path = os.path.join(
+    DOWNLOAD_DIR, 'mgnify', 'mgy_clusters.fa')
+small_bfd_database_path = os.path.join(
+    DOWNLOAD_DIR, 'small_bfd',    'bfd-first_non_consensus_sequences.fasta')
+bfd_database_path = os.path.join(
+    DOWNLOAD_DIR, 'bfd',    'bfd_metaclust_clu_complete_id30_c90_final_seq.sorted_opt')
+uniclust30_database_path = os.path.join(
+    DOWNLOAD_DIR, 'uniclust30', 'UniRef30_2021_06', 'UniRef30_2021_06')
+pdb70_database_path = os.path.join(DOWNLOAD_DIR, 'pdb70', 'pdb70')
+template_mmcif_dir = os.path.join(DOWNLOAD_DIR, 'pdb_mmcif_old', 'mmcif_files')
+obsolete_pdbs_path = os.path.join(DOWNLOAD_DIR, 'pdb_mmcif_old', 'obsolete.dat')
+pdb_seqres_database_path=os.path.join(DOWNLOAD_DIR, 'pdb_seqres', 'pdb_seqres.txt')
+
+
+
+
+
+
 flags.DEFINE_list('fasta_paths', None, 'Paths to FASTA files, each containing '
                   'a prediction target. Paths should be separated by commas. '
                   'All FASTA paths must have a unique basename as the '
@@ -56,7 +86,7 @@ flags.DEFINE_list('is_prokaryote_list', None, 'Optional for multimer system, '
                   'origin is unknown. These values determine the pairing '
                   'method for the MSA.')
 
-flags.DEFINE_string('data_dir', None, 'Path to directory of supporting data.')
+flags.DEFINE_string('data_dir', data_dir, 'Path to directory of supporting data.')
 flags.DEFINE_string('output_dir', None, 'Path to a directory that will '
                     'store the results.')
 flags.DEFINE_string('jackhmmer_binary_path', shutil.which('jackhmmer'),
@@ -71,9 +101,9 @@ flags.DEFINE_string('hmmbuild_binary_path', shutil.which('hmmbuild'),
                     'Path to the hmmbuild executable.')
 flags.DEFINE_string('kalign_binary_path', shutil.which('kalign'),
                     'Path to the Kalign executable.')
-flags.DEFINE_string('uniref90_database_path', None, 'Path to the Uniref90 '
+flags.DEFINE_string('uniref90_database_path', uniref90_database_path, 'Path to the Uniref90 '
                     'database for use by JackHMMER.')
-flags.DEFINE_string('mgnify_database_path', None, 'Path to the MGnify '
+flags.DEFINE_string('mgnify_database_path', mgnify_database_path, 'Path to the MGnify '
                     'database for use by JackHMMER.')
 flags.DEFINE_string('bfd_database_path', None, 'Path to the BFD '
                     'database for use by HHblits.')
@@ -87,11 +117,11 @@ flags.DEFINE_string('pdb70_database_path', None, 'Path to the PDB70 '
                     'database for use by HHsearch.')
 flags.DEFINE_string('pdb_seqres_database_path', None, 'Path to the PDB '
                     'seqres database for use by hmmsearch.')
-flags.DEFINE_string('template_mmcif_dir', None, 'Path to a directory with '
+flags.DEFINE_string('template_mmcif_dir', template_mmcif_dir, 'Path to a directory with '
                     'template mmCIF structures, each named <pdb_id>.cif')
-flags.DEFINE_string('max_template_date', None, 'Maximum template release date '
+flags.DEFINE_string('max_template_date', '2050-01-01', 'Maximum template release date '
                     'to consider. Important if folding historical test sets.')
-flags.DEFINE_string('obsolete_pdbs_path', None, 'Path to file containing a '
+flags.DEFINE_string('obsolete_pdbs_path', obsolete_pdbs_path, 'Path to file containing a '
                     'mapping from obsolete PDB IDs to the PDB IDs of their '
                     'replacements.')
 flags.DEFINE_enum('db_preset', 'full_dbs',
@@ -113,9 +143,13 @@ flags.DEFINE_integer('random_seed', None, 'The random seed for the data '
                      'that even if this is set, Alphafold may still not be '
                      'deterministic, because processes like GPU inference are '
                      'nondeterministic.')
-flags.DEFINE_boolean('use_precomputed_msas', False, 'Whether to read MSAs that '
+flags.DEFINE_integer('max_recycles', 3,'Max recycles')
+flags.DEFINE_boolean('use_precomputed_msas', True, 'Whether to read MSAs that '
                      'have been written to disk. WARNING: This will not check '
                      'if the sequence, database or configuration have changed.')
+flags.DEFINE_boolean('seq_only', False, 'exist after seq search')
+flags.DEFINE_boolean('relax', False, 'Relax strucures using Amber')
+
 
 FLAGS = flags.FLAGS
 
@@ -169,6 +203,8 @@ def predict_structure(
         is_prokaryote=is_prokaryote)
   timings['features'] = time.time() - t_0
 
+  if FLAGS.seq_only:
+    sys.exit()
   # Write out features as a pickled dictionary.
   features_output_path = os.path.join(output_dir, 'features.pkl')
   with open(features_output_path, 'wb') as f:
@@ -281,6 +317,7 @@ def main(argv):
                        'sure it is installed on your system.')
 
   use_small_bfd = FLAGS.db_preset == 'reduced_dbs'
+  
   _check_flag('small_bfd_database_path', 'db_preset',
               should_be_set=use_small_bfd)
   _check_flag('bfd_database_path', 'db_preset',
@@ -376,6 +413,10 @@ def main(argv):
       model_config.model.num_ensemble_eval = num_ensemble
     else:
       model_config.data.eval.num_ensemble = num_ensemble
+
+    #model_config.data.common.num_recycle = FLAGS.max_recycles 
+    #model_config.model.num_recycle = FLAGS.max_recycles
+
     model_params = data.get_model_haiku_params(
         model_name=model_name, data_dir=FLAGS.data_dir)
     model_runner = model.RunModel(model_config, model_params)
@@ -384,12 +425,14 @@ def main(argv):
   logging.info('Have %d models: %s', len(model_runners),
                list(model_runners.keys()))
 
-  amber_relaxer = relax.AmberRelaxation(
-      max_iterations=RELAX_MAX_ITERATIONS,
-      tolerance=RELAX_ENERGY_TOLERANCE,
-      stiffness=RELAX_STIFFNESS,
-      exclude_residues=RELAX_EXCLUDE_RESIDUES,
-      max_outer_iterations=RELAX_MAX_OUTER_ITERATIONS)
+  amber_relaxer = False
+  if FLAGS.relax:
+    amber_relaxer = relax.AmberRelaxation(
+    max_iterations=RELAX_MAX_ITERATIONS,
+    tolerance=RELAX_ENERGY_TOLERANCE,
+    stiffness=RELAX_STIFFNESS,
+    exclude_residues=RELAX_EXCLUDE_RESIDUES,
+    max_outer_iterations=RELAX_MAX_OUTER_ITERATIONS)
 
   random_seed = FLAGS.random_seed
   if random_seed is None:
@@ -416,12 +459,12 @@ if __name__ == '__main__':
   flags.mark_flags_as_required([
       'fasta_paths',
       'output_dir',
-      'data_dir',
-      'uniref90_database_path',
-      'mgnify_database_path',
-      'template_mmcif_dir',
-      'max_template_date',
-      'obsolete_pdbs_path',
+#      'data_dir',
+#      'uniref90_database_path',
+#      'mgnify_database_path',
+#      'template_mmcif_dir',
+#      'max_template_date',
+#      'obsolete_pdbs_path',
   ])
 
   app.run(main)

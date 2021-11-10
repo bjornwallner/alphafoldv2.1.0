@@ -124,6 +124,7 @@ def from_pdb_string(pdb_str: str, chain_id: Optional[str] = None) -> Protein:
       b_factors.append(res_b_factors)
 
   # Chain IDs are usually characters so map these to ints.
+  #print('chains_ids:',chain_ids)
   unique_chain_ids = np.unique(chain_ids)
   chain_id_mapping = {cid: n for n, cid in enumerate(unique_chain_ids)}
   chain_index = np.array([chain_id_mapping[cid] for cid in chain_ids])
@@ -149,8 +150,7 @@ def to_pdb(prot: Protein) -> str:
   Args:
     prot: The protein to convert to PDB.
 
-  Returns:
-    PDB string.
+  Returns:    PDB string.
   """
   restypes = residue_constants.restypes + ['X']
   res_1to3 = lambda r: residue_constants.restype_1to3.get(restypes[r], 'UNK')
@@ -170,11 +170,13 @@ def to_pdb(prot: Protein) -> str:
 
   # Construct a mapping from chain integer indices to chain ID strings.
   chain_ids = {}
-  for i in np.unique(chain_index):  # np.unique gives sorted output.
+  
+  #The multimer version chain_ids starts from 1, using enumerate ensures the PDB_CHAIN_IDS are picked in order/BW
+  for i,j in enumerate(np.unique(chain_index)):  # np.unique gives sorted output.
     if i >= PDB_MAX_CHAINS:
       raise ValueError(
           f'The PDB format supports at most {PDB_MAX_CHAINS} chains.')
-    chain_ids[i] = PDB_CHAIN_IDS[i]
+    chain_ids[j] = PDB_CHAIN_IDS[i] 
 
   pdb_lines.append('MODEL     1')
   atom_index = 1

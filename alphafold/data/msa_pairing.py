@@ -346,7 +346,9 @@ def pair_sequences(examples: List[pipeline.FeatureDict],
     common_species.update(set(species_dict))
 
   common_species = sorted(common_species)
-  common_species.remove(b'')  # Remove target sequence species.
+#  print('common',common_species)
+  if b'' in common_species:
+    common_species.remove(b'')  # Remove target sequence species.
 
   all_paired_msa_rows = [np.zeros(len(examples), int)]
   all_paired_msa_rows_dict = {k: [] for k in range(num_examples)}
