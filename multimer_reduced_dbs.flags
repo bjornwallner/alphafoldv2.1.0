@@ -1,0 +1,5 @@
+--model_preset=multimer
+--db_preset=reduced_dbs
+--small_bfd_database_path=/proj/wallner/share/alphafold_data/small_bfd/bfd-first_non_consensus_sequences.fasta
+--pdb_seqres_database_path=/proj/wallner/share/alphafold_data/pdb_seqres/pdb_seqres.txt
+--uniprot_database_path=/proj/wallner/share/alphafold_data/uniprot/uniprot.fasta
