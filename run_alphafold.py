@@ -64,8 +64,8 @@ bfd_database_path = os.path.join(
 uniclust30_database_path = os.path.join(
     DOWNLOAD_DIR, 'uniclust30', 'UniRef30_2021_06', 'UniRef30_2021_06')
 pdb70_database_path = os.path.join(DOWNLOAD_DIR, 'pdb70', 'pdb70')
-template_mmcif_dir = os.path.join(DOWNLOAD_DIR, 'pdb_mmcif_old', 'mmcif_files')
-obsolete_pdbs_path = os.path.join(DOWNLOAD_DIR, 'pdb_mmcif_old', 'obsolete.dat')
+template_mmcif_dir = os.path.join(DOWNLOAD_DIR, 'pdb_mmcif', 'mmcif_files')
+obsolete_pdbs_path = os.path.join(DOWNLOAD_DIR, 'pdb_mmcif', 'obsolete.dat')
 pdb_seqres_database_path=os.path.join(DOWNLOAD_DIR, 'pdb_seqres', 'pdb_seqres.txt')
 
 
