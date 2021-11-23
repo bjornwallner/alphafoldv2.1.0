@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # Copyright 2021 DeepMind Technologies Limited
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,7 +28,7 @@ import time
 #from absl import flags
 from absl import logging
 from alphafold.common import protein
-from alphafold.common import residue_constants
+#from alphafold.common import residue_constants
 #from alphafold.data import pipeline
 #from alphafold.data import pipeline_multimer
 #from alphafold.data import templates
