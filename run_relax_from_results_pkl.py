@@ -63,8 +63,14 @@ def main():
     stiffness=RELAX_STIFFNESS,
     exclude_residues=RELAX_EXCLUDE_RESIDUES,
     max_outer_iterations=RELAX_MAX_OUTER_ITERATIONS)
+
+    
+    
     # Load the model outputs.
-    result_output_path = os.path.join(output_dir, f'result_{model_name}.pkl')
+    result_output_path = sys.argv[1]:
+    print(result_output_path)
+
+    os.path.join(output_dir, f'result_{model_name}.pkl')
     model_name=get_model_name_from_pkl(result_out_path)
     with open(result_output_path, 'rb') as f:
       prediction_results=pickle.load(f)
