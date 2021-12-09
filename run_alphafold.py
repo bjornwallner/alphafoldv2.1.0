@@ -149,6 +149,7 @@ flags.DEFINE_boolean('use_precomputed_msas', True, 'Whether to read MSAs that '
                      'if the sequence, database or configuration have changed.')
 flags.DEFINE_boolean('seq_only', False, 'exist after seq search')
 flags.DEFINE_boolean('relax', False, 'Relax strucures using Amber')
+flags.DEFINE_boolean('dropout',False,'Make is_training=True to turn on drop out during inference to get more diversity')
 
 
 FLAGS = flags.FLAGS
@@ -419,7 +420,7 @@ def main(argv):
 
     model_params = data.get_model_haiku_params(
         model_name=model_name, data_dir=FLAGS.data_dir)
-    model_runner = model.RunModel(model_config, model_params)
+    model_runner = model.RunModel(model_config, model_params,is_training=FLAGS.dropout)
     model_runners[model_name] = model_runner
 
   logging.info('Have %d models: %s', len(model_runners),

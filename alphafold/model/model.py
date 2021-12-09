@@ -66,7 +66,8 @@ class RunModel:
 
   def __init__(self,
                config: ml_collections.ConfigDict,
-               params: Optional[Mapping[str, Mapping[str, np.ndarray]]] = None):
+               params: Optional[Mapping[str, Mapping[str, np.ndarray]]] = None
+               is_training=False):
     self.config = config
     self.params = params
     self.multimer_mode = config.model.global_config.multimer_mode
@@ -76,16 +77,16 @@ class RunModel:
         model = modules_multimer.AlphaFold(self.config.model)
         return model(
             batch,
-            is_training=False)
+            is_training=is_training)
     else:
       def _forward_fn(batch):
         model = modules.AlphaFold(self.config.model)
         return model(
             batch,
-            is_training=False,
+            is_training=is_trianing,
             compute_loss=False,
             ensemble_representations=True)
-
+    
     self.apply = jax.jit(hk.transform(_forward_fn).apply)
     self.init = jax.jit(hk.transform(_forward_fn).init)
 
