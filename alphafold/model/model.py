@@ -71,7 +71,7 @@ class RunModel:
     self.config = config
     self.params = params
     self.multimer_mode = config.model.global_config.multimer_mode
-
+    logging.info(f'is_training={is_training}')
     if self.multimer_mode:
       def _forward_fn(batch):
         model = modules_multimer.AlphaFold(self.config.model)
