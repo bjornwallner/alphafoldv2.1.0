@@ -21,6 +21,7 @@ import random
 import shutil
 import sys
 import time
+import bz2
 from typing import Dict, Union, Optional
 
 from absl import app
@@ -143,13 +144,16 @@ flags.DEFINE_integer('random_seed', None, 'The random seed for the data '
                      'that even if this is set, Alphafold may still not be '
                      'deterministic, because processes like GPU inference are '
                      'nondeterministic.')
-flags.DEFINE_integer('max_recycles', 3,'Max recycles')
+flags.DEFINE_integer('max_recycles', 3,'Max recycles (not yet implemented')
+flags.DEFINE_integer('nstruct', 1,'number of models to create for each network model')
 flags.DEFINE_boolean('use_precomputed_msas', True, 'Whether to read MSAs that '
                      'have been written to disk. WARNING: This will not check '
                      'if the sequence, database or configuration have changed.')
 flags.DEFINE_boolean('seq_only', False, 'exist after seq search')
 flags.DEFINE_boolean('relax', False, 'Relax strucures using Amber')
 flags.DEFINE_boolean('dropout',False,'Make is_training=True to turn on drop out during inference to get more diversity')
+
+
 
 
 FLAGS = flags.FLAGS
@@ -207,8 +211,9 @@ def predict_structure(
   if FLAGS.seq_only:
     sys.exit()
   # Write out features as a pickled dictionary.
-  features_output_path = os.path.join(output_dir, 'features.pkl')
-  with open(features_output_path, 'wb') as f:
+  features_output_path = os.path.join(output_dir, 'features.pkl.bz2')
+  #with open(features_output_path, 'wb') as f:
+  with bz2.BZ2File(features_output_path, 'w') as f: 
     pickle.dump(feature_dict, f, protocol=4)
 
   unrelaxed_pdbs = {}
@@ -217,71 +222,83 @@ def predict_structure(
 
   # Run the models.
   num_models = len(model_runners)
-  for model_index, (model_name, model_runner) in enumerate(
+  for model_index, (network_model_name, model_runner) in enumerate(
       model_runners.items()):
-    logging.info('Running model %s on %s', model_name, fasta_name)
-    t_0 = time.time()
-    model_random_seed = model_index + random_seed * num_models
-    processed_feature_dict = model_runner.process_features(
+    for model_no in range(1,FLAGS.nstruct+1):
+      model_name=f'{network_model_name}_{model_no}'
+#      model_random_seed = model_index + random_seed * num_models
+      model_random_seed = model_no + random_seed * (model_index+1)
+      logging.info('Running model %s on %s. random seed: %d', model_name, fasta_name, model_random_seed)
+      t_0 = time.time()
+      processed_feature_dict = model_runner.process_features(
         feature_dict, random_seed=model_random_seed)
-    timings[f'process_features_{model_name}'] = time.time() - t_0
+      timings[f'process_features_{model_name}'] = time.time() - t_0
 
-    t_0 = time.time()
-    prediction_result = model_runner.predict(processed_feature_dict,
+      t_0 = time.time()
+      prediction_result = model_runner.predict(processed_feature_dict,
                                              random_seed=model_random_seed)
-    t_diff = time.time() - t_0
-    timings[f'predict_and_compile_{model_name}'] = t_diff
-    logging.info(
+      t_diff = time.time() - t_0
+      timings[f'predict_and_compile_{model_name}'] = t_diff
+      logging.info(
         'Total JAX model %s on %s predict time (includes compilation time, see --benchmark): %.1fs',
         model_name, fasta_name, t_diff)
 
-    if benchmark:
-      t_0 = time.time()
-      model_runner.predict(processed_feature_dict,
+      if benchmark:
+        t_0 = time.time()
+        model_runner.predict(processed_feature_dict,
                            random_seed=model_random_seed)
-      t_diff = time.time() - t_0
-      timings[f'predict_benchmark_{model_name}'] = t_diff
-      logging.info(
+        t_diff = time.time() - t_0
+        timings[f'predict_benchmark_{model_name}'] = t_diff
+        logging.info(
           'Total JAX model %s on %s predict time (excludes compilation time): %.1fs',
           model_name, fasta_name, t_diff)
 
-    plddt = prediction_result['plddt']
-    ranking_confidences[model_name] = prediction_result['ranking_confidence']
+      plddt = prediction_result['plddt']
+      ranking_confidences[model_name] = prediction_result['ranking_confidence']
 
-    # Save the model outputs.
-    result_output_path = os.path.join(output_dir, f'result_{model_name}.pkl')
-    with open(result_output_path, 'wb') as f:
-      pickle.dump(prediction_result, f, protocol=4)
+      # Save the model outputs.
+      result_output_path = os.path.join(output_dir, f'result_{model_name}.pkl')
+      #    with open(result_output_path, 'wb') as f:
+      result_output_path_bz2 = os.path.join(output_dir, f'result_{model_name}.pkl.bz2')
+      with bz2.BZ2File(result_output_path_bz2, 'w') as f:
+        pickle.dump(prediction_result, f, protocol=4)
+      # Save the scores in json
+      d={}
+      for k in ['ptm','iptm','ranking_confidence']:
+        d[k]=float(prediction_result[k])
+      with open(result_output_path + '.json', 'w') as f:
+            json.dump(d,f)
 
-    # Add the predicted LDDT in the b-factor column.
-    # Note that higher predicted LDDT value means higher model confidence.
-    plddt_b_factors = np.repeat(
+
+        # Add the predicted LDDT in the b-factor column.
+        # Note that higher predicted LDDT value means higher model confidence.
+      plddt_b_factors = np.repeat(
         plddt[:, None], residue_constants.atom_type_num, axis=-1)
-    unrelaxed_protein = protein.from_prediction(
+      unrelaxed_protein = protein.from_prediction(
         features=processed_feature_dict,
         result=prediction_result,
         b_factors=plddt_b_factors,
         remove_leading_feature_dimension=not model_runner.multimer_mode)
 
-    unrelaxed_pdbs[model_name] = protein.to_pdb(unrelaxed_protein)
-    unrelaxed_pdb_path = os.path.join(output_dir, f'unrelaxed_{model_name}.pdb')
-    with open(unrelaxed_pdb_path, 'w') as f:
-      f.write(unrelaxed_pdbs[model_name])
+      unrelaxed_pdbs[model_name] = protein.to_pdb(unrelaxed_protein)
+      unrelaxed_pdb_path = os.path.join(output_dir, f'unrelaxed_{model_name}.pdb')
+      with open(unrelaxed_pdb_path, 'w') as f:
+        f.write(unrelaxed_pdbs[model_name])
 
-    if amber_relaxer:
-      # Relax the prediction.
-      t_0 = time.time()
-      relaxed_pdb_str, _, _ = amber_relaxer.process(prot=unrelaxed_protein)
-      timings[f'relax_{model_name}'] = time.time() - t_0
+      if amber_relaxer:
+        # Relax the prediction.
+        t_0 = time.time()
+        relaxed_pdb_str, _, _ = amber_relaxer.process(prot=unrelaxed_protein)
+        timings[f'relax_{model_name}'] = time.time() - t_0
 
-      relaxed_pdbs[model_name] = relaxed_pdb_str
+        relaxed_pdbs[model_name] = relaxed_pdb_str
 
-      # Save the relaxed PDB.
-      relaxed_output_path = os.path.join(
+        # Save the relaxed PDB.
+        relaxed_output_path = os.path.join(
           output_dir, f'relaxed_{model_name}.pdb')
-      with open(relaxed_output_path, 'w') as f:
-        f.write(relaxed_pdb_str)
-
+        with open(relaxed_output_path, 'w') as f:
+          f.write(relaxed_pdb_str)
+        
   # Rank by model confidence and write out relaxed PDBs in rank order.
   ranked_order = []
   for idx, (model_name, _) in enumerate(
@@ -414,6 +431,10 @@ def main(argv):
       model_config.model.num_ensemble_eval = num_ensemble
     else:
       model_config.data.eval.num_ensemble = num_ensemble
+
+    if FLAGS.dropout:
+      #dropout set is_training to True and during training models can be assembled. Here num_ensemble will always be 1 though. But unless this variable is set the program will crash.
+      model_config.model.num_ensemble_train = num_ensemble
 
     #model_config.data.common.num_recycle = FLAGS.max_recycles 
     #model_config.model.num_recycle = FLAGS.max_recycles
