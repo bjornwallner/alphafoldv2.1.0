@@ -226,9 +226,13 @@ def predict_structure(
       model_runners.items()):
     for model_no in range(1,FLAGS.nstruct+1):
       model_name=f'{network_model_name}_{model_no}'
+      unrelaxed_pdb_path = os.path.join(output_dir, f'unrelaxed_{model_name}.pdb')
+      if os.path.exists(unrelaxed_pdb_path):
+        logging.info(f'{unrelaxed_pdb_path} already exists')
+        continue
 #      model_random_seed = model_index + random_seed * num_models
       model_random_seed = model_no + random_seed * (model_index+1)
-      logging.info('Running model %s on %s. random seed: %d', model_name, fasta_name, model_random_seed)
+      logging.info('Running model %s on %s, random seed: %d', model_name, fasta_name, model_random_seed)
       t_0 = time.time()
       processed_feature_dict = model_runner.process_features(
         feature_dict, random_seed=model_random_seed)
@@ -281,7 +285,7 @@ def predict_structure(
         remove_leading_feature_dimension=not model_runner.multimer_mode)
 
       unrelaxed_pdbs[model_name] = protein.to_pdb(unrelaxed_protein)
-      unrelaxed_pdb_path = os.path.join(output_dir, f'unrelaxed_{model_name}.pdb')
+
       with open(unrelaxed_pdb_path, 'w') as f:
         f.write(unrelaxed_pdbs[model_name])
 
@@ -312,7 +316,7 @@ def predict_structure(
       else:
         f.write(unrelaxed_pdbs[model_name])
 
-  os.system(f'bzip2 {output_dir}/ranked*pdb')
+  os.system(f'bzip2 -f {output_dir}/ranked*pdb')
   ranking_output_path = os.path.join(output_dir, 'ranking_debug.json')
   with open(ranking_output_path, 'w') as f:
     label = 'iptm+ptm' if 'iptm' in prediction_result else 'plddts'
