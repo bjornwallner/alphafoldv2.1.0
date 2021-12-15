@@ -83,7 +83,7 @@ class RunModel:
         model = modules.AlphaFold(self.config.model)
         return model(
             batch,
-            is_training=is_trianing,
+            is_training=is_training,
             compute_loss=False,
             ensemble_representations=True)
     

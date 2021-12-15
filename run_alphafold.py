@@ -213,7 +213,7 @@ def predict_structure(
   # Write out features as a pickled dictionary.
   features_output_path = os.path.join(output_dir, 'features.pkl.bz2')
   #with open(features_output_path, 'wb') as f:
-  with bz2.BZ2File(features_output_path, 'w') as f: 
+  with bz2.open(features_output_path, 'wb') as f: 
     pickle.dump(feature_dict, f, protocol=4)
 
   unrelaxed_pdbs = {}
@@ -260,7 +260,7 @@ def predict_structure(
       result_output_path = os.path.join(output_dir, f'result_{model_name}.pkl')
       #    with open(result_output_path, 'wb') as f:
       result_output_path_bz2 = os.path.join(output_dir, f'result_{model_name}.pkl.bz2')
-      with bz2.BZ2File(result_output_path_bz2, 'w') as f:
+      with bz2.open(result_output_path_bz2, 'wb') as f:
         pickle.dump(prediction_result, f, protocol=4)
       # Save the scores in json
       d={}
@@ -306,11 +306,13 @@ def predict_structure(
     ranked_order.append(model_name)
     ranked_output_path = os.path.join(output_dir, f'ranked_{idx}.pdb')
     with open(ranked_output_path, 'w') as f:
+#    with bz2.open(ranked_output_path+'.bz2', 'w') as f: 
       if amber_relaxer:
         f.write(relaxed_pdbs[model_name])
       else:
         f.write(unrelaxed_pdbs[model_name])
 
+  os.system(f'bzip2 {output_dir}/ranked*pdb')
   ranking_output_path = os.path.join(output_dir, 'ranking_debug.json')
   with open(ranking_output_path, 'w') as f:
     label = 'iptm+ptm' if 'iptm' in prediction_result else 'plddts'

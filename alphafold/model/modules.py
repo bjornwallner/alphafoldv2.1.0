@@ -31,6 +31,7 @@ import haiku as hk
 import jax
 import jax.numpy as jnp
 
+from absl import logging
 
 def softmax_cross_entropy(logits, labels):
   """Computes softmax cross entropy given logits and one-hot class labels."""
@@ -518,13 +519,12 @@ class Transition(hk.Module):
             initializer=utils.final_init(self.global_config),
             name='transition2')
     ])
-
     act = mapping.inference_subbatch(
         transition_module,
         self.global_config.subbatch_size,
         batched_args=[act],
         nonbatched_args=[],
-        low_memory=not is_training)
+        low_memory=True) # low_memory=not is_training)
 
     return act
 
@@ -771,7 +771,7 @@ class MSARowAttentionWithPairBias(hk.Module):
         self.global_config.subbatch_size,
         batched_args=[msa_act, msa_act, bias],
         nonbatched_args=[nonbatched_bias],
-        low_memory=not is_training)
+        low_memory=True) # low_memory=not is_training)
 
     return msa_act
 
@@ -824,7 +824,7 @@ class MSAColumnAttention(hk.Module):
         self.global_config.subbatch_size,
         batched_args=[msa_act, msa_act, bias],
         nonbatched_args=[],
-        low_memory=not is_training)
+        low_memory=True) # low_memory=not is_training)
 
     msa_act = jnp.swapaxes(msa_act, -2, -3)
 
@@ -882,7 +882,7 @@ class MSAColumnGlobalAttention(hk.Module):
         self.global_config.subbatch_size,
         batched_args=[msa_act, msa_act, msa_mask, bias],
         nonbatched_args=[],
-        low_memory=not is_training)
+        low_memory=True) # low_memory=not is_training)
 
     msa_act = jnp.swapaxes(msa_act, -2, -3)
 
@@ -943,7 +943,7 @@ class TriangleAttention(hk.Module):
         self.global_config.subbatch_size,
         batched_args=[pair_act, pair_act, bias],
         nonbatched_args=[nonbatched_bias],
-        low_memory=not is_training)
+        low_memory=True) # low_memory=not is_training)
 
     if c.orientation == 'per_column':
       pair_act = jnp.swapaxes(pair_act, -2, -3)
@@ -2095,7 +2095,7 @@ class TemplateEmbedding(hk.Module):
         self.config.subbatch_size,
         batched_args=batched_args,
         nonbatched_args=nonbatched_args,
-        low_memory=not is_training)
+        low_memory=True) # low_memory=not is_training)
     embedding = jnp.reshape(embedding,
                             [num_res, num_res, query_num_channels])
 
