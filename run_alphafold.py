@@ -146,13 +146,19 @@ flags.DEFINE_integer('random_seed', None, 'The random seed for the data '
                      'nondeterministic.')
 flags.DEFINE_integer('max_recycles', 3,'Max recycles (not yet implemented')
 flags.DEFINE_integer('nstruct', 1,'number of models to create for each network model')
+flags.DEFINE_integer('nstruct_start',1, 'model to start with, can be used to parallize jobs, '
+                     'e.g --nstruct 20 --nstruct_start 20 will only make model _20'
+                     'e.g --nstruct 21 --nstruct_start 20 will make model _20 and _21 etc.')
 flags.DEFINE_boolean('use_precomputed_msas', True, 'Whether to read MSAs that '
                      'have been written to disk. WARNING: This will not check '
                      'if the sequence, database or configuration have changed.')
 flags.DEFINE_boolean('seq_only', False, 'exist after seq search')
 flags.DEFINE_boolean('relax', False, 'Relax strucures using Amber')
 flags.DEFINE_boolean('dropout',False,'Make is_training=True to turn on drop out during inference to get more diversity')
-
+flags.DEFINE_boolean('output_all_results',False,'Output original results pickle (LARGE..'
+                     'only recommended if you really know you need any of the following:'
+                     'distogram, experimentally_resolved, masked_msa,aligned_confidence_probs')
+flags.DEFINE_list('models_to_use',None, 'specify which models in model_preset that should be run')
 
 
 
@@ -213,8 +219,9 @@ def predict_structure(
   # Write out features as a pickled dictionary.
   features_output_path = os.path.join(output_dir, 'features.pkl.bz2')
   #with open(features_output_path, 'wb') as f:
-  with bz2.open(features_output_path, 'wb') as f: 
-    pickle.dump(feature_dict, f, protocol=4)
+  if not os.path.exists(features_output_path):
+    with bz2.open(features_output_path, 'wb') as f: 
+      pickle.dump(feature_dict, f, protocol=4)
 
   unrelaxed_pdbs = {}
   relaxed_pdbs = {}
@@ -222,9 +229,8 @@ def predict_structure(
 
   # Run the models.
   num_models = len(model_runners)
-  for model_index, (network_model_name, model_runner) in enumerate(
-      model_runners.items()):
-    for model_no in range(1,FLAGS.nstruct+1):
+  for model_no in range(FLAGS.nstruct_start,FLAGS.nstruct+1):
+    for model_index, (network_model_name, model_runner) in enumerate(model_runners.items()):
       model_name=f'{network_model_name}_{model_no}'
       unrelaxed_pdb_path = os.path.join(output_dir, f'unrelaxed_{model_name}.pdb')
       if os.path.exists(unrelaxed_pdb_path):
@@ -263,9 +269,18 @@ def predict_structure(
       # Save the model outputs.
       result_output_path = os.path.join(output_dir, f'result_{model_name}.pkl')
       #    with open(result_output_path, 'wb') as f:
-      result_output_path_bz2 = os.path.join(output_dir, f'result_{model_name}.pkl.bz2')
-      with bz2.open(result_output_path_bz2, 'wb') as f:
-        pickle.dump(prediction_result, f, protocol=4)
+      if FLAGS.output_all_results:
+        with open(result_output_path, 'wb') as f:
+          pickle.dump(prediction_result, f, protocol=4)
+      else:
+        keys_to_remove=['distogram', 'experimentally_resolved', 'masked_msa','aligned_confidence_probs']
+        d={}
+        for k in prediction_result.keys():
+          if k not in keys_to_remove:
+            d[k]=prediction_result[k]
+        with open(result_output_path, 'wb') as f:
+          pickle.dump(d, f, protocol=4)
+        
       # Save the scores in json
       d={}
       for k in ['ptm','iptm','ranking_confidence']:
@@ -431,6 +446,14 @@ def main(argv):
 
   model_runners = {}
   model_names = config.MODEL_PRESETS[FLAGS.model_preset]
+  #print(model_names)
+  if FLAGS.models_to_use:
+    model_names =[m for m in model_names if m in FLAGS.models_to_use]
+  if len(model_names)==0:
+    raise ValueError(f'No models to run: {FLAGS.models_to_use} is not in {config.MODEL_PRESETS[FLAGS.model_preset]}')
+  
+  #print(model_names)
+  #sys.exit()
   for model_name in model_names:
     model_config = config.model_config(model_name)
     if run_multimer_system:
