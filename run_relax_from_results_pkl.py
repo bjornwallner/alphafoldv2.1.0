@@ -16,12 +16,14 @@
 """Relax AlphaFold protein structure prediction script."""
 import json
 import os
+import re
 #import pathlib
 import pickle
 #import random
 #import shutil
 import sys
 import time
+import bz2
 #from typing import Dict, Union, Optional
 
 #from absl import app
@@ -73,7 +75,19 @@ def main():
     result_pickle = sys.argv[1]
     output_dir=os.path.dirname(result_pickle)
     model_name=os.path.basename(result_pickle).replace('result_','').replace('.pkl','')
+    relaxed_output_path = result_pickle.replace('result_','relaxed_').replace('.pkl','.pdb')
+    if os.path.exists(relaxed_output_path):
+        print(f'{relaxed_output_path} exists, delete if you want to rerun.')
+        sys.exit(0)
+    match=re.search('result_(\S*?_\d)[_\d]*\.pkl',result_pickle)
+    if match:
+        model_name=match.group(1)
+    else:
+        print(f'Cannot get model_name from {result_pickle}')
+        sys.exit()
+    
     print(model_name)
+   # sys.exit()
     print(os.path.dirname(os.path.realpath(__file__)))
     data_dir=f'{os.path.dirname(os.path.realpath(__file__))}/alphafold_data/'
     print(data_dir)
@@ -88,12 +102,34 @@ def main():
     model_runner = model.RunModel(model_config, model_params)
     
     feature_pickle=f'{output_dir}/features.pkl'
-    #os.path.join(output_dir, f'result_{model_name}.pkl')
+    try:
+        f=open(feature_pickle,'rb')
+    except:
+        print(f'Could not open {feature_pickle}')
+
+
+    try:
+        f=bz2.open(feature_pickle+'.bz2','rb')
+    except:
+        print(f'Could not open {feature_pickle}.bz2')
+        sys.exit()
+
     processed_feature_dict={}
-    with open(feature_pickle,'rb') as f:
-        feature_dict=pickle.load(f)
-        processed_feature_dict = model_runner.process_features(
-            feature_dict, random_seed=42) #model_random_seed)
+    feature_dict=pickle.load(f)
+    processed_feature_dict = model_runner.process_features(feature_dict, random_seed=42) #mo
+    f.close()
+
+    #os.path.join(output_dir, f'result_{model_name}.pkl')
+
+#    try:
+#        with open(feature_pickle,'rb') as f:
+            
+#            processed_feature_dict = model_runner.process_features(feature_dict, random_seed=42) #model_random_seed)
+#    except:
+        
+        
+        
+
     #print(processed_feature_dict)
     with open(result_pickle, 'rb') as f:
       prediction_result=pickle.load(f)
@@ -114,9 +150,11 @@ def main():
       #      with open(unrelaxed_pdb_path, 'w') as f:
       #        f.write(unrelaxed_pdbs[model_name])
       #print(unrelaxed_pdbs[model_name])
-#      sys.exit()
-      relaxed_output_path = os.path.join(
-          output_dir, f'relaxed_{model_name}.pdb')
+      #      sys.exit()
+
+
+#      relaxed_output_path = os.path.join(
+#          output_dir, f'relaxed_{model_name}.pdb')
       print(relaxed_output_path)
       #sys.exit()
       t_0 = time.time()
