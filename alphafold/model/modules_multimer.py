@@ -23,6 +23,13 @@ Lower-level modules up to EvoformerIteration are reused from modules.py.
 import functools
 from typing import Sequence
 
+from absl import logging
+from alphafold.common import protein
+from alphafold.model import model
+from alphafold.common import confidence
+import os
+import pickle
+
 from alphafold.common import residue_constants
 from alphafold.model import all_atom_multimer
 from alphafold.model import common_modules
@@ -461,6 +468,7 @@ class AlphaFold(hk.Module):
           'prev_pair':
               jnp.zeros([num_res, num_res, emb_config.pair_channel]),
       }
+      logging.info(f'DEBUG {batch.keys()}')
 
       if 'num_iter_recycling' in batch:
         # Training time: num_iter_recycling is in batch.
@@ -478,7 +486,37 @@ class AlphaFold(hk.Module):
         del i
         prev, safe_key = x
         safe_key1, safe_key2 = safe_key.split() if c.resample_msa_in_recycling else safe_key.duplicate()  # pylint: disable=line-too-long
+        logging.info(f'Apply network iteration')
         ret = apply_network(prev=prev, safe_key=safe_key2)
+        logging.info(f'Network applied: {ret.keys()}')
+#        ptm = confidence.predicted_tm_score(logits=ret['predicted_aligned_error']['logits'],breaks=ret['predicted_aligned_error']['breaks'],asym_id=None)
+        j=0
+        outfile=f'test_cycle{j}.pkl'
+        while os.path.exists(outfile):
+          outfile=f'test_cycle{j}.pkl'
+          j+=1
+        logging.info('Dumping pickle {outfile}')
+        with open(outfile,'wb') as f:
+          pickle.dump(ret, f, protocol=4)
+ #       iptm= = confidence.predicted_tm_score(
+ #           logits=ret['predicted_aligned_error']['logits'],
+ #           breaks=ret['predicted_aligned_error']['breaks'],
+ #           asym_id=ret['predicted_aligned_error']['asym_id'],
+ #           interface=True)
+#        ranking=0.8*iptm+ptm
+        
+ #       conf=model.get_confidence_metrics(ret, multimer_mode=True)
+#        logging.info(f'Iteration: {ret["iter"]}')
+        logging.info(f'PTM: {ptm}')
+#        del conf
+        #plddt_b_factors = np.repeat(plddt[:, None], residue_constants.atom_type_num, axis=-1)
+        #unrelaxed_protein = protein.from_prediction(
+        #features=processed_feature_dict,
+#        result=prediction_result,
+#        b_factors=plddt_b_factors,
+#        remove_leading_feature_dimension=False)
+
+ #     unrelaxed_pdbs[model_name] = protein.to_pdb(unrelaxed_protein)
         return get_prev(ret), safe_key1
 
       prev, safe_key = hk.fori_loop(0, num_iter, recycle_body, (prev, safe_key))
