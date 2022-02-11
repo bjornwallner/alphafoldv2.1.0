@@ -144,7 +144,7 @@ flags.DEFINE_integer('random_seed', None, 'The random seed for the data '
                      'that even if this is set, Alphafold may still not be '
                      'deterministic, because processes like GPU inference are '
                      'nondeterministic.')
-flags.DEFINE_integer('max_recycles', 3,'Max recycles (not yet implemented')
+flags.DEFINE_integer('max_recycles', 3,'Max recycles')
 flags.DEFINE_integer('nstruct', 1,'number of models to create for each network model')
 flags.DEFINE_integer('nstruct_start',1, 'model to start with, can be used to parallize jobs, '
                      'e.g --nstruct 20 --nstruct_start 20 will only make model _20'
@@ -466,8 +466,12 @@ def main(argv):
       #dropout set is_training to True and during training models can be assembled. Here num_ensemble will always be 1 though. But unless this variable is set the program will crash.
       model_config.model.num_ensemble_train = num_ensemble
 
-    #model_config.data.common.num_recycle = FLAGS.max_recycles 
-    #model_config.model.num_recycle = FLAGS.max_recycles
+    if FLAGS.max_recycles != 3:
+      logging.info(f'Setting max_recycles to {FLAGS.max_recycles}')
+      model_config.model.num_recycle = FLAGS.max_recycles
+      if not run_multimer_system:
+        model_config.data.common.num_recycle = FLAGS.max_recycles
+
 
     model_params = data.get_model_haiku_params(
         model_name=model_name, data_dir=FLAGS.data_dir)
