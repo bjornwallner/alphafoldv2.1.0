@@ -71,13 +71,15 @@ class RunModel:
     self.config = config
     self.params = params
     self.multimer_mode = config.model.global_config.multimer_mode
+    self.return_representations = config.model.return_representations
     logging.info(f'is_training={is_training}')
     if self.multimer_mode:
       def _forward_fn(batch):
         model = modules_multimer.AlphaFold(self.config.model)
         return model(
             batch,
-            is_training=is_training)
+            is_training=is_training,
+            return_representations=self.return_representations)
     else:
       def _forward_fn(batch):
         model = modules.AlphaFold(self.config.model)
@@ -85,7 +87,8 @@ class RunModel:
             batch,
             is_training=is_training,
             compute_loss=False,
-            ensemble_representations=True)
+            ensemble_representations=True,
+            return_representations=self.return_representations)
     
     self.apply = jax.jit(hk.transform(_forward_fn).apply)
     self.init = jax.jit(hk.transform(_forward_fn).init)
