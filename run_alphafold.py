@@ -155,6 +155,7 @@ flags.DEFINE_boolean('use_precomputed_msas', True, 'Whether to read MSAs that '
 flags.DEFINE_boolean('seq_only', False, 'exist after seq search')
 flags.DEFINE_boolean('relax', False, 'Relax strucures using Amber')
 flags.DEFINE_boolean('dropout',False,'Make is_training=True to turn on drop out during inference to get more diversity')
+flags.DEFINE_boolean('dropout_structure_module',True, 'No dropout in structure module at inference')
 flags.DEFINE_boolean('output_all_results',False,'Output original results pickle (LARGE..'
                      'only recommended if you really know you need any of the following:'
                      'distogram, experimentally_resolved, masked_msa,aligned_confidence_probs')
@@ -462,9 +463,13 @@ def main(argv):
     else:
       model_config.data.eval.num_ensemble = num_ensemble
 
+    #print(model_config)
+    #sys.exit()
     if FLAGS.dropout:
       #dropout set is_training to True and during training models can be assembled. Here num_ensemble will always be 1 though. But unless this variable is set the program will crash.
       model_config.model.num_ensemble_train = num_ensemble
+      if not FLAGS.dropout_structure_module:
+        model_config.model.heads.structure_module.dropout=0.0
 
     if FLAGS.max_recycles != 3:
       logging.info(f'Setting max_recycles to {FLAGS.max_recycles}')
@@ -472,7 +477,8 @@ def main(argv):
       if not run_multimer_system:
         model_config.data.common.num_recycle = FLAGS.max_recycles
 
-
+    logging.info(f'model_config.model.heads.structure_module.dropout {model_config.model.heads.structure_module.dropout}')
+        
     model_params = data.get_model_haiku_params(
         model_name=model_name, data_dir=FLAGS.data_dir)
     model_runner = model.RunModel(model_config, model_params,is_training=FLAGS.dropout)

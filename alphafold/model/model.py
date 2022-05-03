@@ -78,6 +78,7 @@ class RunModel:
         return model(
             batch,
             is_training=is_training)
+#            return_representations=self.config.model.return_representations)
     else:
       def _forward_fn(batch):
         model = modules.AlphaFold(self.config.model)

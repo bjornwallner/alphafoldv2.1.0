@@ -1,6 +1,6 @@
 --model_preset=multimer
 --db_preset=full_dbs
---uniclust30_database_path=/proj/wallner/share/alphafold_data/uniclust30/UniRef30_2021_06/UniRef30_2021_06
---bfd_database_path=/proj/wallner/share/alphafold_data/bfd/bfd_metaclust_clu_complete_id30_c90_final_seq.sorted_opt
---pdb_seqres_database_path=/proj/wallner/share/alphafold_data/pdb_seqres/pdb_seqres.txt
---uniprot_database_path=/proj/wallner/share/alphafold_data/uniprot/uniprot.fasta
+--uniclust30_database_path=/proj/wallner-b/share/alphafold_data/uniclust30/UniRef30_2021_06/UniRef30_2021_06
+--bfd_database_path=/proj/wallner-b/share/alphafold_data/bfd/bfd_metaclust_clu_complete_id30_c90_final_seq.sorted_opt
+--pdb_seqres_database_path=/proj/wallner-b/share/alphafold_data/pdb_seqres/pdb_seqres.txt
+--uniprot_database_path=/proj/wallner-b/share/alphafold_data/uniprot/uniprot.fasta
