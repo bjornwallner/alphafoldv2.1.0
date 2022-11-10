@@ -156,10 +156,29 @@ flags.DEFINE_boolean('seq_only', False, 'exist after seq search')
 flags.DEFINE_boolean('relax', False, 'Relax strucures using Amber')
 flags.DEFINE_boolean('dropout',False,'Make is_training=True to turn on drop out during inference to get more diversity')
 flags.DEFINE_boolean('dropout_structure_module',True, 'No dropout in structure module at inference')
+
 flags.DEFINE_boolean('output_all_results',False,'Output original results pickle (LARGE..'
                      'only recommended if you really know you need any of the following:'
                      'distogram, experimentally_resolved, masked_msa,aligned_confidence_probs')
 flags.DEFINE_list('models_to_use',None, 'specify which models in model_preset that should be run')
+flags.DEFINE_float('increase_dropout',1.0,'Increase dropout by this factor')
+flags.DEFINE_float('msa_column_attention_dropout_rate',0.0,'dropout')
+flags.DEFINE_float('msa_row_attention_with_pair_bias_dropout_rate',0.15,'dropout')
+flags.DEFINE_float('msa_transition_dropout_rate',0.0,'dropout')
+flags.DEFINE_float('outer_product_mean_dropout_rate',0.0,'dropout')
+flags.DEFINE_float('evo_pair_transition_dropout_rate',0.0,'dropout')
+flags.DEFINE_float('evo_triangle_attention_ending_node_dropout_rate',0.25,'dropout')
+flags.DEFINE_float('evo_triangle_attention_starting_node_dropout_rate',0.25,'dropout')
+flags.DEFINE_float('evo_triangle_multiplication_incoming_dropout_rate',0.25,'dropout')
+flags.DEFINE_float('evo_triangle_multiplication_outgoing_dropout_rate',0.25,'dropout')
+flags.DEFINE_float('pair_transition_dropout_rate',0.0,'dropout')
+flags.DEFINE_float('triangle_attention_ending_node_dropout_rate',0.25,'dropout')
+flags.DEFINE_float('triangle_attention_starting_node_dropout_rate',0.25,'dropout')
+flags.DEFINE_float('triangle_multiplication_incoming_dropout_rate',0.25,'dropout')
+flags.DEFINE_float('triangle_multiplication_outgoing_dropout_rate',0.25,'dropout')
+flags.DEFINE_float('structure_module_dropout',0.1,'dropout')
+
+
 
 
 
@@ -274,7 +293,8 @@ def predict_structure(
         with open(result_output_path, 'wb') as f:
           pickle.dump(prediction_result, f, protocol=4)
       else:
-        keys_to_remove=['distogram', 'experimentally_resolved', 'masked_msa','aligned_confidence_probs']
+#        keys_to_remove=['distogram', 'experimentally_resolved', 'masked_msa','aligned_confidence_probs']
+        keys_to_remove=['experimentally_resolved', 'masked_msa','aligned_confidence_probs']
         d={}
         for k in prediction_result.keys():
           if k not in keys_to_remove:
@@ -456,6 +476,14 @@ def main(argv):
   
   #print(model_names)
   #sys.exit()
+  #def isdropout(key,data):
+  #  if isinstance(value,(float,bool,int,str)):
+  #    return 'dropout' in key
+  #  return f
+  #  return isinstance(data,(float,bool,int,str)):
+      
+    
+    
   for model_name in model_names:
     model_config = config.model_config(model_name)
     if run_multimer_system:
@@ -466,11 +494,94 @@ def main(argv):
     #print(model_config)
     #sys.exit()
     if FLAGS.dropout:
+      logging.info(f'Dropout before changes:')
+      for model_ in model_config:
+        for settings in model_config[model_]:
+          if isinstance(model_config[model_][settings],(float,bool,int,str)):
+            print(model_,settings, model_config[model_][settings])
+          else:
+            for layer1 in model_config[model_][settings]:
+              if isinstance(model_config[model_][settings][layer1],(float,bool,int,str)):
+                print(model_,settings, layer1, model_config[model_][settings][layer1])
+              else:
+                for layer2 in model_config[model_][settings][layer1]:
+                  if isinstance(model_config[model_][settings][layer1][layer2],(float,bool,int,str)):
+                    print(model_,settings, layer1, layer2, model_config[model_][settings][layer1][layer2])
+                  else:
+                    for layer3 in model_config[model_][settings][layer1][layer2]:
+                      if isinstance(model_config[model_][settings][layer1][layer2][layer3],(float,bool,int,str)):
+                        print(model_,settings, layer1, layer2,layer3, model_config[model_][settings][layer1][layer2][layer3])
+                      else:
+                        #print('stuff left',model,settings, layer1, layer2,layer3)
+                        for layer4 in model_config[model_][settings][layer1][layer2][layer3]:
+                          if isinstance(model_config[model_][settings][layer1][layer2][layer3][layer4],(float,bool,int,str)):
+                            print(model_,settings, layer1, layer2,layer3, layer4,model_config[model_][settings][layer1][layer2][layer3][layer4])
+                          else:
+                            print('stuff left',model_,settings, layer1, layer2,layer3, layer4)
+            
+          #for lvl1 in model_config.model.settings:
+          #  print(model,settings,lvl1,model_config.model.settings.lvl1)
+      #print(model_config)
+      #DEFAULT FROM config
+      #model_config.model.embeddings_and_evoformer.evoformer.msa_column_attention.dropout_rate=0.0
+      #model_config.model.embeddings_and_evoformer.evoformer.msa_row_attention_with_pair_bias.dropout_rate=0.15
+      #model_config.model.embeddings_and_evoformer.evoformer.msa_transition.dropout_rate=0.0
+      #model_config.model.embeddings_and_evoformer.evoformer.outer_product_mean.dropout_rate=0.0
+      #model_config.model.embeddings_and_evoformer.evoformer.pair_transition.dropout_rate=0.0
+      #model_config.model.embeddings_and_evoformer.evoformer.triangle_attention_ending_node.dropout_rate=0.25
+      #model_config.model.embeddings_and_evoformer.evoformer.triangle_attention_starting_node.dropout_rate=0.25
+      #model_config.model.embeddings_and_evoformer.evoformer.triangle_multiplication_incoming.dropout_rate=0.25
+      #model_config.model.embeddings_and_evoformer.evoformer.triangle_multiplication_outgoing.dropout_rate=0.25
+      #model_config.model.embeddings_and_evoformer.template.template_pair_stack.pair_transition.dropout_rate=0.0
+      #model_config.model.embeddings_and_evoformer.template.template_pair_stack.triangle_attention_ending_node.dropout_rate=0.25
+      #model_config.model.embeddings_and_evoformer.template.template_pair_stack.triangle_attention_starting_node.dropout_rate=0.25
+      #model_config.model.embeddings_and_evoformer.template.template_pair_stack.triangle_multiplication_incoming.dropout_rate=0.25
+      #model_config.model.embeddings_and_evoformer.template.template_pair_stack.triangle_multiplication_outgoing.dropout_rate=0.25
+      #model_config.model.heads.structure_module.dropout=0.1
+
+      #model_config.model.embeddings_and_evoformer.evoformer.msa_column_attention.dropout_rate=0.15
+      #model_config.model.embeddings_and_evoformer.evoformer.msa_row_attention_with_pair_bias.dropout_rate=0.15 #default
+      #model_config.model.embeddings_and_evoformer.evoformer.msa_transition.dropout_rate=0.15
+      #model_config.model.embeddings_and_evoformer.evoformer.outer_product_mean.dropout_rate=0.15
+      #model_config.model.embeddings_and_evoformer.evoformer.pair_transition.dropout_rate=0.15
+      #model_config.model.embeddings_and_evoformer.evoformer.triangle_attention_ending_node.dropout_rate=0.25
+      #model_config.model.embeddings_and_evoformer.evoformer.triangle_attention_starting_node.dropout_rate=0.25
+      #model_config.model.embeddings_and_evoformer.evoformer.triangle_multiplication_incoming.dropout_rate=0.25
+      #model_config.model.embeddings_and_evoformer.evoformer.triangle_multiplication_outgoing.dropout_rate=0.25
+      #model_config.model.embeddings_and_evoformer.template.template_pair_stack.pair_transition.dropout_rate=0.0
+      #model_config.model.embeddings_and_evoformer.template.template_pair_stack.triangle_attention_ending_node.dropout_rate=0.25
+      #model_config.model.embeddings_and_evoformer.template.template_pair_stack.triangle_attention_starting_node.dropout_rate=0.25
+      #model_config.model.embeddings_and_evoformer.template.template_pair_stack.triangle_multiplication_incoming.dropout_rate=0.25
+      #model_config.model.embeddings_and_evoformer.template.template_pair_stack.triangle_multiplication_outgoing.dropout_rate=0.25
+      #model_config.model.heads.structure_module.dropout=0.1
+
+
+      model_config.model.embeddings_and_evoformer.evoformer.msa_column_attention.dropout_rate=FLAGS.msa_column_attention_dropout_rate*FLAGS.increase_dropout #0.0
+      model_config.model.embeddings_and_evoformer.evoformer.msa_row_attention_with_pair_bias.dropout_rate=FLAGS.msa_row_attention_with_pair_bias_dropout_rate*FLAGS.increase_dropout#0.15 #default
+      model_config.model.embeddings_and_evoformer.evoformer.msa_transition.dropout_rate=FLAGS.msa_transition_dropout_rate*FLAGS.increase_dropout #0.15
+      model_config.model.embeddings_and_evoformer.evoformer.outer_product_mean.dropout_rate=FLAGS.outer_product_mean_dropout_rate*FLAGS.increase_dropout #0.15
+      model_config.model.embeddings_and_evoformer.evoformer.pair_transition.dropout_rate=FLAGS.evo_pair_transition_dropout_rate*FLAGS.increase_dropout #0.15
+      model_config.model.embeddings_and_evoformer.evoformer.triangle_attention_ending_node.dropout_rate=FLAGS.evo_triangle_attention_ending_node_dropout_rate*FLAGS.increase_dropout #0.25
+      model_config.model.embeddings_and_evoformer.evoformer.triangle_attention_starting_node.dropout_rate=FLAGS.evo_triangle_attention_starting_node_dropout_rate*FLAGS.increase_dropout#0.25
+      model_config.model.embeddings_and_evoformer.evoformer.triangle_multiplication_incoming.dropout_rate=FLAGS.evo_triangle_multiplication_incoming_dropout_rate*FLAGS.increase_dropout#0.25
+      model_config.model.embeddings_and_evoformer.evoformer.triangle_multiplication_outgoing.dropout_rate=FLAGS.evo_triangle_multiplication_outgoing_dropout_rate*FLAGS.increase_dropout#0.25
+      model_config.model.embeddings_and_evoformer.template.template_pair_stack.pair_transition.dropout_rate=FLAGS.pair_transition_dropout_rate*FLAGS.increase_dropout #0.0
+      model_config.model.embeddings_and_evoformer.template.template_pair_stack.triangle_attention_ending_node.dropout_rate=FLAGS.triangle_attention_ending_node_dropout_rate*FLAGS.increase_dropout#0.25
+      model_config.model.embeddings_and_evoformer.template.template_pair_stack.triangle_attention_starting_node.dropout_rate=FLAGS.triangle_attention_starting_node_dropout_rate*FLAGS.increase_dropout#0.25
+      model_config.model.embeddings_and_evoformer.template.template_pair_stack.triangle_multiplication_incoming.dropout_rate=FLAGS.triangle_multiplication_incoming_dropout_rate*FLAGS.increase_dropout#0.25
+      model_config.model.embeddings_and_evoformer.template.template_pair_stack.triangle_multiplication_outgoing.dropout_rate=FLAGS.triangle_multiplication_outgoing_dropout_rate*FLAGS.increase_dropout#0.25
+      model_config.model.heads.structure_module.dropout=FLAGS.structure_module_dropout*FLAGS.increase_dropout
+
+      
+
+      #sys.exit()
       #dropout set is_training to True and during training models can be assembled. Here num_ensemble will always be 1 though. But unless this variable is set the program will crash.
       model_config.model.num_ensemble_train = num_ensemble
       if not FLAGS.dropout_structure_module:
         model_config.model.heads.structure_module.dropout=0.0
+        
 
+        
     if FLAGS.max_recycles != 3:
       logging.info(f'Setting max_recycles to {FLAGS.max_recycles}')
       model_config.model.num_recycle = FLAGS.max_recycles

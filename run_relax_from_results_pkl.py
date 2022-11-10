@@ -46,6 +46,7 @@ from alphafold.model import data
 
 logging.set_verbosity(logging.INFO)
 
+os.environ['OPENMM_CPU_THREADS']='16'
 
 
 
@@ -79,7 +80,7 @@ def main():
     if os.path.exists(relaxed_output_path):
         print(f'{relaxed_output_path} exists, delete if you want to rerun.')
         sys.exit(0)
-    match=re.search('result_(\S*?_\d)[_\d]*\.pkl',result_pickle)
+    match=re.search('result_(model_[\d]*["_ptm]*["_multimer"]*["_v2"]*)_\d+\.pkl',result_pickle)
     if match:
         model_name=match.group(1)
     else:
@@ -87,7 +88,7 @@ def main():
         sys.exit()
     
     print(model_name)
-   # sys.exit()
+    #sys.exit()
     print(os.path.dirname(os.path.realpath(__file__)))
     data_dir=f'{os.path.dirname(os.path.realpath(__file__))}/alphafold_data/'
     print(data_dir)

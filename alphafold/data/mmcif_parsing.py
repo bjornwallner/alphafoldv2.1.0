@@ -179,8 +179,10 @@ def parse(*,
   Returns:
     A ParsingResult.
   """
+  import sys
   errors = {}
   try:
+
     parser = PDB.MMCIFParser(QUIET=True)
     handle = io.StringIO(mmcif_string)
     full_structure = parser.get_structure('', handle)
@@ -195,10 +197,14 @@ def parse(*,
         parsed_info[key] = [value]
 
     header = _get_header(parsed_info)
-
+    #print(parsed_info)
+    #sys.exit()
     # Determine the protein chains, and their start numbers according to the
     # internal mmCIF numbering scheme (likely but not guaranteed to be 1).
     valid_chains = _get_protein_chains(parsed_info=parsed_info)
+    #print('hej',valid_chains)
+    #sys.exit()
+    
     if not valid_chains:
       return ParsingResult(
           None, {(file_id, ''): 'No protein chains found in this file.'})

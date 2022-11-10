@@ -176,7 +176,8 @@ def _assess_hhsearch_hit(
     query_sequence: str,
     release_dates: Mapping[str, datetime.datetime],
     release_date_cutoff: datetime.datetime,
-    max_subsequence_ratio: float = 0.95,
+#    max_subsequence_ratio: float = 0.95,
+    max_subsequence_ratio: float = 1.01,
     min_align_ratio: float = 0.1) -> bool:
   """Determines if template is valid (without parsing the template mmcif file).
 
@@ -695,7 +696,7 @@ def _process_single_hit(
   """Tries to extract template features from a single HHSearch hit."""
   # Fail hard if we can't get the PDB ID and chain name from the hit.
   hit_pdb_code, hit_chain_id = _get_pdb_id_and_chain(hit)
-
+ 
   # This hit has been removed (obsoleted) from PDB, skip it.
   if hit_pdb_code in obsolete_pdbs and obsolete_pdbs[hit_pdb_code] is None:
     return SingleHitResult(
@@ -739,6 +740,7 @@ def _process_single_hit(
   parsing_result = mmcif_parsing.parse(
       file_id=hit_pdb_code, mmcif_string=cif_string)
 
+  
   if parsing_result.mmcif_object is not None:
     hit_release_date = datetime.datetime.strptime(
         parsing_result.mmcif_object.header['release_date'], '%Y-%m-%d')

@@ -76,7 +76,8 @@ def dropout_wrapper(module,
   gc = global_config
   residual = module(input_act, mask, is_training=is_training, **kwargs)
   dropout_rate = 0.0 if gc.deterministic else module.config.dropout_rate
-
+  #print('check dropout_rate',dropout_rate)
+  #logging.info(gc)
   if module.config.shared_dropout:
     if module.config.orientation == 'per_row':
       broadcast_dim = 0
